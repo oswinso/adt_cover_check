@@ -1,0 +1,22 @@
+{
+  "_help": "Fixes for the dancer/director credits. aliases: other spellings of the same person. split_by_class: names shared by different people, told apart by class year. different_people: pairs that share an Instagram handle in some description by mistake (silences the sync hint). class: force someone's class, e.g. {\"Some Name\": \"24\"} or \"G\".",
+  "aliases": {
+    "Tien Amy Bui": ["Amy Bui", "Amy Tien", "Tien Bui"],
+    "Haris Imamovic": ["Harry Imamović"],
+    "Mel Cao": ["Mel", "Melody Lily-Rose Cao"],
+    "Xinyi Lucy Chen": ["Lucy Xinyi Chen"],
+    "Krittamate Boomza Tiankanol": ["Krittamate Tiankanon Boom"],
+    "Tricia Hu": ["Xinghui Hu"],
+    "Matt Feng": ["Matthew Feng"],
+    "Michelle Huang": ["Michelle"],
+    "Zhixing Chen": ["Z"],
+    "Nicholas Tsao": ["Nick Tsao"],
+    "Abena Kyereme-Tuah": ["Abena K-T"],
+    "Karen Ma": ["Ningshan Ma", "Ningshan Karen Ma"],
+    "Nitu Renganathan": ["Nrithya Renganathan"],
+    "Puwanat Sangkhapreecha": ["Puwanat Adam Sangkhapreecha"]
+  },
+  "split_by_class": ["Jimin Lee"],
+  "different_people": [["Tiffany Wang", "Tricia Hu"]],
+  "class": {}
+}

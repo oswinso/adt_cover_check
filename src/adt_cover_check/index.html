@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADT Cover Check</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --text: #1d1c1a; --muted: #6d6a64; --line: #e4e1da;
+    --accent: #a31f34; --accent-soft: #f6e4e7; --tag: #eeece6;
+    /* time-from-release classes: <=1 yr, <=2 yr, <=3 yr, then a neutral for older */
+    --gap-1: #1baf7a; --gap-2: #2a78d6; --gap-3: #eb6834; --gap-4: #7d7c78;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151413; --panel: #1f1e1c; --text: #ecebe7; --muted: #9a968e; --line: #33312d;
+      --accent: #ef6b80; --accent-soft: #3a1c22; --tag: #2c2a27;
+      --gap-1: #199e70; --gap-2: #3987e5; --gap-3: #d95926; --gap-4: #6b6a66;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK KR", sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px 64px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 20px 0 12px; border-bottom: 1px solid var(--line); }
+  .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  h1 a { text-decoration: none; }
+  h1 span { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  input[type=search] { flex: 1 1 260px; min-width: 0; padding: 10px 14px; font: inherit; color: inherit;
+         background: var(--panel); border: 1px solid var(--line); border-radius: 10px; outline: none; }
+  input[type=search]:focus { border-color: var(--accent); }
+  nav { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  nav a { padding: 10px 16px; text-decoration: none; color: var(--muted); white-space: nowrap; }
+  nav button { padding: 10px 14px; font: inherit; color: var(--muted); background: none; border: 0; cursor: pointer; white-space: nowrap; }
+  nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  nav a.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  h2 { font-size: 18px; margin: 24px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 20px; color: var(--muted); text-decoration: none; font-size: 14px; }
+  .back:hover, .artist-link:hover { color: var(--accent); }
+
+  table.artists { min-width: 560px; }
+  table.artists td.name a { font-weight: 600; text-decoration: none; display: block; }
+  table.artists tbody tr:hover { background: var(--accent-soft); }
+  table.artists tbody tr { cursor: pointer; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .table-scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; min-width: 820px; }
+  td.streams a { text-decoration: none; }
+  td.streams a:hover { color: var(--accent); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+       cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { color: var(--text); }
+  th.nosort { cursor: default; }
+  td.date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .song { display: flex; align-items: center; gap: 12px; }
+  .song img { width: 80px; height: 45px; object-fit: cover; border-radius: 6px; flex: none; background: var(--tag); }
+  .song-name { font-weight: 600; overflow-wrap: anywhere; }
+  .tag { display: inline-block; margin: 3px 4px 0 0; padding: 1px 7px; border-radius: 999px;
+         background: var(--tag); color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .tag.special { background: var(--accent-soft); color: var(--accent); }
+  .artist-link { text-decoration: none; }
+  .versions { margin-top: 6px; font-size: 12.5px; line-height: 1.5; }
+  .versions a { display: block; color: var(--muted); text-decoration: none; }
+  .versions a:hover { color: var(--accent); }
+  .watch { display: inline-block; padding: 5px 11px; border-radius: 8px; background: var(--accent); color: #fff;
+           text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  @media (prefers-color-scheme: dark) { .watch { color: #151413; } }
+  select { padding: 9px 12px; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .filters { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--muted); font-size: 14px; flex-wrap: wrap; }
+  .popover-wrap { position: relative; }
+  .popover-btn { padding: 9px 12px; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .popover-btn[aria-expanded=true] { border-color: var(--accent); }
+  .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 10; min-width: 250px; max-height: 60vh; overflow-y: auto;
+             padding: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); color: var(--text); }
+  .popover label { display: flex; padding: 5px 6px; border-radius: 6px; }
+  .popover label:hover { background: var(--tag); }
+  .popover label .dim { margin-left: auto; padding-left: 16px; font-variant-numeric: tabular-nums; }
+  .popover-actions { display: flex; gap: 6px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .popover-actions button { padding: 4px 9px; font: inherit; font-size: 12.5px; color: var(--muted); background: var(--tag); border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .popover-actions button:hover { color: var(--accent); }
+  .filters label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .filters input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+  .plot-scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .plot-scroll svg { display: block; }
+  .plot .grid { stroke: var(--line); stroke-width: 1; }
+  .plot .diag { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: .7; }
+  .plot .band { opacity: .13; }
+  .plot .c1 { fill: var(--gap-1); } .plot .c2 { fill: var(--gap-2); } .plot .c3 { fill: var(--gap-3); } .plot .c4 { fill: var(--gap-4); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; }
+  .legend b { color: var(--text); font-weight: 600; }
+  .plot .diag.faint { opacity: .45; }
+  .plot .line-tag { fill: var(--muted); font-size: 10px; pointer-events: none; }
+  .plot .tick, .plot .axis-title { fill: var(--muted); font-size: 11.5px; }
+  .plot .axis-title { font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 10.5px; }
+  .plot .dot { stroke: var(--panel); stroke-width: 2; }
+  .plot .hit { fill: transparent; cursor: pointer; }
+  .plot .lbl { font-size: 11px; font-weight: 500; pointer-events: none; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+  .plot g.pt.hover .dot { stroke: var(--text); }
+  .plot g.pt.hover .lbl { font-weight: 700; }
+  .plot .bar-hit { fill: transparent; }
+  .plot g.bin.hover .bar { opacity: .75; }
+  .plot .median { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .plot .median-label { fill: var(--text); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  /* y-axis labels that stay put while the plot scrolls sideways */
+  .plot-inner { position: relative; }
+  .sticky-axis { position: sticky; left: 0; width: 0; height: 0; z-index: 2; }
+  .sticky-axis svg { position: absolute; left: 0; top: 0; }
+  .sticky-axis rect { fill: var(--panel); }
+  .plot.density { border-top: 1px solid var(--line); }
+  .plot .dens-area { fill: var(--accent); opacity: .18; }
+  .plot .dens-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  .plot .cross { stroke: var(--muted); stroke-width: 1; display: none; }
+  .hist { padding: 4px 0 0; margin-bottom: 22px; }
+  h3 { font-size: 14px; margin: 18px 0 8px; }
+  #tip { position: fixed; z-index: 20; display: none; max-width: 300px; padding: 10px 12px; pointer-events: none;
+         background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+         box-shadow: 0 10px 30px rgba(0,0,0,.3); font-size: 13px; line-height: 1.5; }
+  #tip b { font-size: 14px; }
+  #tip table { border-collapse: collapse; min-width: 0; width: auto; margin-top: 4px; }
+  #tip td { padding: 0 10px 0 0; border: 0; color: var(--muted); vertical-align: top; }
+  #tip td + td { color: var(--text); padding-right: 0; }
+  .empty { padding: 40px 0; text-align: center; color: var(--muted); }
+  .dim { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1><a href="#/"><span>ADT</span> Cover Check</a></h1>
+      <span class="meta" id="meta"></span>
+    </div>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search by song, artist or dancer…" autocomplete="off" autofocus>
+      <nav>
+        <a href="#/" id="nav-artists">Artists</a>
+        <a href="#/all" id="nav-all">All covers</a>
+        <a href="#/people" id="nav-people">People</a>
+        <a href="#/timeline" id="nav-timeline">Timeline</a>
+      </nav>
+      <nav id="group-filter" aria-label="Filter by artist type">
+        <button data-group="all">All</button>
+        <button data-group="girl group">Girl groups</button>
+        <button data-group="boy group">Boy groups</button>
+        <button data-group="rest">Other</button>
+      </nav>
+    </div>
+  </header>
+  <main id="main"><p class="empty">Loading…</p></main>
+</div>
+
+<div id="tip" role="tooltip"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = (s) => String(s ?? "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+let covers = [];            // one entry per video
+let songs = [];             // one entry per covered song; its videos are in .versions (main cover first)
+let artists = [];           // [{key, name, songs, videos}]
+let sort = null;            // {col, dir} chosen by clicking a header; null = view default
+let artistSort = { col: "name", dir: 1 };
+let people = [];            // dancers & directors, with .danced / .directed song lists
+let peopleSort = { col: "danced", dir: -1 };
+let classSel = new Set();   // ticked boxes in the "Show" popover: class years ("2027") plus "grad-current" / "grad-past"
+let classDefault = [];      // the boxes that make up "current members"
+let classOpen = false;
+let eligibleOnly = false;   // only people who may direct: danced in at least MIN_COVERS_TO_DIRECT covers
+const MIN_COVERS_TO_DIRECT = 2;
+let group = "all";          // "all" | "girl group" | "boy group" | "rest" (soloists, co-ed, unclassified)
+const inGroup = (x) => group === "all" || (group === "rest" ? !/group$/.test(x.artist_type) : x.artist_type === group);
+const GROUP_LABEL = { all: "", "girl group": " · girl groups only", "boy group": " · boy groups only", rest: " · soloists, co-ed & other only" };
+
+function fmtDate(d) {
+  if (!d) return '<span class="dim">—</span>';
+  const [y, m, day] = d.split("-");
+  if (!m) return y;
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1];
+  return day ? `${mon} ${+day}, ${y}` : `${mon} ${y}`;
+}
+
+function fmtCount(n) {
+  if (!n) return '<span class="dim">—</span>';
+  const short = n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n);
+  return `<span title="${n.toLocaleString()}">${short}</span>`;
+}
+
+function matches(hay, query) {
+  const tokens = query.split(/\s+/).map(norm).filter(Boolean);
+  return tokens.length > 0 && tokens.every((t) => hay.includes(t));
+}
+
+const SPECIAL = /ver|variety|behind|speed|collab/i;
+
+const COLS = {
+  song: (c) => norm(c.song),
+  artist: (c) => norm(c.artist),
+  song_date: (c) => c.song_date || "",
+  cover_date: (c) => c.cover_date || "",
+  streams_total: (c) => c.streams_total || 0,
+  streams_daily: (c) => c.streams_daily || 0,
+};
+
+function sorted(rows, fallback) {
+  const { col, dir } = sort || fallback;
+  const key = COLS[col];
+  return [...rows].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    if (!ka !== !kb) return ka ? -1 : 1;                 // missing values always last
+    return (ka < kb ? -1 : ka > kb ? 1 : 0) * dir
+        || a.song_key.localeCompare(b.song_key)           // keep versions of a song together
+        || (a.cover_date || "").localeCompare(b.cover_date || "");
+  });
+}
+
+function table(rows, fallbackSort) {
+  if (!rows.length) return '<p class="empty">No covers found.</p>';
+  const active = sort || fallbackSort;
+  const th = (col, label, cls = "") =>
+    `<th data-col="${col}"${cls ? ` class="${cls}"` : ""}>${label}${active.col === col ? (active.dir > 0 ? " ↑" : " ↓") : ""}</th>`;
+  const tags = (list) => list.map((t) => `<span class="tag${SPECIAL.test(t) ? " special" : ""}">${esc(t)}</span>`).join("");
+  const body = sorted(rows, fallbackSort).map((c) => `
+    <tr>
+      <td><div class="song">
+        <a href="${esc(c.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="https://i.ytimg.com/vi/${esc(c.id)}/mqdefault.jpg"></a>
+        <div><div class="song-name" title="${esc(c.title)}">${esc(c.song)}</div>${tags(c.tags)}</div>
+      </div></td>
+      <td><a class="artist-link" href="#/artist/${encodeURIComponent(c.artist_key)}">${esc(c.artist)}</a></td>
+      <td class="date">${fmtDate(c.song_date)}</td>
+      <td class="date">${fmtDate(c.cover_date)}</td>
+      <td class="num streams">${c.spotify_url ? `<a href="${esc(c.spotify_url)}" target="_blank" rel="noopener">${fmtCount(c.streams_total)}</a>` : fmtCount(0)}</td>
+      <td class="num streams">${fmtCount(c.streams_daily)}</td>
+      <td><a class="watch" href="${esc(c.url)}" target="_blank" rel="noopener">Watch ↗</a>
+        ${c.versions.length > 1 ? `<div class="versions">${c.versions.slice(1).map((v) =>
+          `<a href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)} · ${esc(v.cover_date || "")}">+ ${esc(v.tags.join(" · ") || "Another version")} ↗</a>`).join("")}</div>` : ""}
+      </td>
+    </tr>`).join("");
+  return `<div class="table-scroll"><table>
+    <thead><tr>${th("song", "Song")}${th("artist", "Artist")}${th("song_date", "Song released")}${th("cover_date", "Cover released")}${th("streams_total", "Spotify streams", "num")}${th("streams_daily", "Daily", "num")}<th class="nosort">Video</th></tr></thead>
+    <tbody>${body}</tbody></table></div>`;
+}
+
+const ARTIST_COLS = {
+  name: { label: "Artist", key: (a) => norm(a.name) },
+  artist_type: { label: "Type", key: (a) => a.artist_type },
+  songs: { label: "Songs", key: (a) => a.songs, num: true },
+  videos: { label: "Videos", key: (a) => a.videos, num: true },
+  latest_cover: { label: "Latest cover", key: (a) => a.latest_cover },
+  latest_song: { label: "Newest song covered", key: (a) => a.latest_song },
+};
+
+function artistList(list) {
+  const { col, dir } = artistSort;
+  const key = ARTIST_COLS[col].key;
+  const rows = [...list].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    if (!ka !== !kb) return ka ? -1 : 1;                 // missing dates always last
+    return (ka < kb ? -1 : ka > kb ? 1 : 0) * dir || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+  const head = Object.entries(ARTIST_COLS).map(([c, def]) =>
+    `<th data-acol="${c}"${def.num ? ' class="num"' : ""}>${def.label}${col === c ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("");
+  const body = rows.map((a) => `
+    <tr data-href="#/artist/${encodeURIComponent(a.key)}">
+      <td class="name"><a href="#/artist/${encodeURIComponent(a.key)}">${esc(a.name)}</a></td>
+      <td class="dim">${esc(a.artist_type)}</td>
+      <td class="num">${a.songs}</td>
+      <td class="num">${a.videos}</td>
+      <td class="date">${fmtDate(a.latest_cover)}</td>
+      <td class="date">${fmtDate(a.latest_song)}</td>
+    </tr>`).join("");
+  return `<div class="table-scroll"><table class="artists"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+const PEOPLE_COLS = {
+  name: { label: "Name", key: (p) => norm(p.name) },
+  label: { label: "Class", key: (p) => (p.year ? String(p.year) : "9999" + (p.current ? "a" : "b")) },
+  danced: { label: "Covers danced", key: (p) => p.danced.length, num: true },
+  directed: { label: "Covers directed", key: (p) => p.directed.length, num: true },
+  latest_danced: { label: "Latest danced", key: (p) => p.latest_danced },
+  latest_directed: { label: "Latest directed", key: (p) => p.latest_directed },
+};
+
+const classToken = (p) => (p.category === "grad" ? (p.current ? "grad-current" : "grad-past") : String(p.year));
+const classMatches = (p) => classSel.has(classToken(p));
+
+function classLabel(p) {
+  return p.category === "grad" ? (p.current ? "Grad student" : "Grad student (past)") : esc(p.label);
+}
+
+function peopleList(list) {
+  const { col, dir } = peopleSort;
+  const key = PEOPLE_COLS[col].key;
+  const rows = [...list].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    if (!ka !== !kb) return ka ? -1 : 1;                 // people with no such credit always last
+    return (ka < kb ? -1 : ka > kb ? 1 : 0) * dir || a.name.localeCompare(b.name);
+  });
+  const head = Object.entries(PEOPLE_COLS).map(([c, def]) =>
+    `<th data-pcol="${c}"${def.num ? ' class="num"' : ""}>${def.label}${col === c ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("");
+  const body = rows.map((p) => `
+    <tr data-href="#/person/${encodeURIComponent(p.key)}">
+      <td class="name"><a href="#/person/${encodeURIComponent(p.key)}">${esc(p.name)}</a></td>
+      <td class="dim">${classLabel(p)}</td>
+      <td class="num">${p.danced.length || '<span class="dim">—</span>'}</td>
+      <td class="num">${p.directed.length || '<span class="dim">—</span>'}</td>
+      <td class="date">${fmtDate(p.latest_danced)}</td>
+      <td class="date">${fmtDate(p.latest_directed)}</td>
+    </tr>`).join("");
+  return `<div class="table-scroll"><table class="artists"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function classOptions() {
+  const years = [...new Set(people.filter((p) => p.year).map((p) => p.year))].sort((a, b) => b - a);
+  return [
+    ...years.map((y) => ({ token: String(y), label: `Class of '${String(y).slice(2)}`, short: `'${String(y).slice(2)}` })),
+    { token: "grad-current", label: "Grad students (current)", short: "grads" },
+    { token: "grad-past", label: "Grad students (past)", short: "past grads" },
+  ];
+}
+
+function classFilterControl() {
+  const options = classOptions();
+  const count = (token) => people.filter((p) => classToken(p) === token).length;
+  const sameAs = (tokens) => tokens.length === classSel.size && tokens.every((t) => classSel.has(t));
+  const summary = sameAs(classDefault) ? "Current members"
+    : sameAs(options.map((o) => o.token)) ? "Everyone"
+    : classSel.size === 0 ? "Nobody selected"
+    : options.filter((o) => classSel.has(o.token)).map((o) => o.short).join(", ");
+  return `<div class="popover-wrap" id="class-wrap">
+    <button type="button" class="popover-btn" id="class-btn" aria-expanded="${classOpen}">${esc(summary)} ▾</button>
+    ${classOpen ? `<div class="popover" id="class-popover">
+      <div class="popover-actions">
+        <button type="button" data-preset="current">Current members</button>
+        <button type="button" data-preset="all">Everyone</button>
+        <button type="button" data-preset="none">Clear</button>
+      </div>
+      ${options.map((o) => `<label><input type="checkbox" data-class="${o.token}"${classSel.has(o.token) ? " checked" : ""}> ${o.label} <span class="dim">${count(o.token)}</span></label>`).join("")}
+    </div>` : ""}
+  </div>`;
+}
+
+// ---- Timeline: scatter of cover date (x) against song release date (y), one dot per song ----
+let plotPoints = [];
+let density = null;         // { series: [{t, n}], x0, x1, W, m, songs } for the strip under the scatter
+const DENS_WINDOW = 91 * 864e5;   // rolling window: covers released within +/- 1.5 months of each date
+const GAP_CLASSES = ["≤1 year", "≤2 years", "≤3 years", ">3 years"];   // time from song release to cover
+const gapClass = (ms) => Math.min(3, Math.max(0, Math.ceil(ms / (365.25 * 864e5)) - 1));
+const gapLegend = (counts) => `<div class="legend">${GAP_CLASSES.map((label, i) =>
+  `<span><i style="background:var(--gap-${i + 1})"></i><b>${label}</b> after release · ${plural(counts[i], "song")}</span>`).join("")}</div>`;
+
+function shortLabel(song) {
+  const base = song.replace(/\s*\([^()]*\)/g, "").replace(/\s*\([^()]*\)/g, "").trim() || song;
+  return base.length > 18 ? base.slice(0, 17).trimEnd() + "…" : base;
+}
+
+function timelinePlot(rows, containerWidth) {
+  const DAY = 864e5, YEAR = 365.25 * DAY;
+  const pts = rows.filter((s) => s.song_date && s.cover_date)
+    .map((s) => ({ s, cx: Date.parse(s.cover_date), sy: Date.parse(s.song_date) }));
+  for (const p of pts) p.cls = gapClass(p.cx - p.sy);
+  plotPoints = pts;
+  if (!pts.length) return '<p class="empty">No songs with both dates.</p>';
+  const m = { l: 54, r: 54, t: 28, b: 40 };
+  const x0 = Math.min(...pts.map((p) => p.cx)) - 60 * DAY, x1 = Math.max(...pts.map((p) => p.cx)) + 90 * DAY;
+  // The y axis tops out at the same date as the x axis, so the "covered on release day" diagonal
+  // ends exactly in the top-right corner.
+  const y0 = Math.min(...pts.map((p) => p.sy)) - 120 * DAY, y1 = x1;
+  const W = Math.max(containerWidth, Math.round(((x1 - x0) / YEAR) * 340) + m.l + m.r);
+  const H = Math.max(480, Math.min(820, innerHeight - 380));
+  const X = (t) => m.l + ((t - x0) / (x1 - x0)) * (W - m.l - m.r);
+  const Y = (t) => H - m.b - ((t - y0) / (y1 - y0)) * (H - m.t - m.b);
+  for (const p of pts) { p.x = X(p.cx); p.y = Y(p.sy); p.label = shortLabel(p.s.song); }
+
+  // Label placement: above the dot if free, else below / to a side; a label with no free spot is
+  // left off (the hover popup still names the song).
+  const boxes = pts.map((p) => [p.x - 6, p.y - 6, p.x + 6, p.y + 6]);
+  // One dashed line per whole year of gap, each tagged "N yr" every other calendar year along its
+  // length; the tags are reserved first so song names don't land on them.
+  const maxGapYears = Math.max(3, Math.ceil(Math.max(...pts.map((p) => (p.cx - p.sy) / YEAR))));
+  const lineTags = [];
+  for (let n = 1; n <= maxGapYears; n++) {
+    for (let yr = new Date(x0).getUTCFullYear(); Date.UTC(yr, 6, 1) < x1; yr++) {
+      const t = Date.UTC(yr, 6, 1);
+      if (yr % 2 || t < x0 || Y(t - n * YEAR) > H - m.b - 4) continue;
+      const tag = { x: X(t), y: Y(t - n * YEAR) - 3, n };
+      lineTags.push(tag);
+      boxes.push([tag.x - 14, tag.y - 10, tag.x + 14, tag.y + 2]);
+    }
+  }
+  const free = (b) => b[0] >= 2 && b[2] <= W - 2 && b[1] >= 2 && !boxes.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  let hidden = 0;
+  for (const p of [...pts].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const w = [...p.label].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e7f ? 11 : 6.1), 0), h = 13;
+    const spots = [
+      { tx: p.x, ty: p.y - 10, anchor: "middle", box: [p.x - w / 2, p.y - 10 - h + 2, p.x + w / 2, p.y - 8] },
+      { tx: p.x, ty: p.y + 19, anchor: "middle", box: [p.x - w / 2, p.y + 8, p.x + w / 2, p.y + 8 + h] },
+      { tx: p.x + 10, ty: p.y + 4, anchor: "start", box: [p.x + 8, p.y - h / 2, p.x + 10 + w, p.y + h / 2] },
+      { tx: p.x - 10, ty: p.y + 4, anchor: "end", box: [p.x - 10 - w, p.y - h / 2, p.x - 8, p.y + h / 2] },
+      { tx: p.x + 7, ty: p.y - 8, anchor: "start", box: [p.x + 6, p.y - 8 - h + 2, p.x + 7 + w, p.y - 6] },
+      { tx: p.x - 7, ty: p.y - 8, anchor: "end", box: [p.x - 7 - w, p.y - 8 - h + 2, p.x - 6, p.y - 6] },
+      { tx: p.x + 7, ty: p.y + 17, anchor: "start", box: [p.x + 6, p.y + 6, p.x + 7 + w, p.y + 6 + h] },
+      { tx: p.x - 7, ty: p.y + 17, anchor: "end", box: [p.x - 7 - w, p.y + 6, p.x - 6, p.y + 6 + h] },
+      ...[-23, 32, -36, 45].map((dy) => ({ tx: p.x, ty: p.y + dy, anchor: "middle", box: [p.x - w / 2, p.y + dy - h + 2, p.x + w / 2, p.y + dy + 2] })),
+    ];
+    p.spot = spots.find((sp) => free(sp.box));
+    if (p.spot) boxes.push(p.spot.box); else hidden++;
+  }
+
+  const years = (a, b) => { const out = []; for (let y = new Date(a).getUTCFullYear(); Date.UTC(y, 0, 1) <= b; y++) if (Date.UTC(y, 0, 1) >= a) out.push(y); return out; };
+  const xt = years(x0, x1), yt = years(y0, y1);
+  const d0 = Math.max(x0, y0), d1 = Math.min(x1, y1);
+  const svg = `<svg class="plot" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot of cover release date against song release date">
+    ${xt.map((y) => `<line class="grid" x1="${X(Date.UTC(y, 0, 1))}" x2="${X(Date.UTC(y, 0, 1))}" y1="${m.t}" y2="${H - m.b}"/><text class="tick" x="${X(Date.UTC(y, 0, 1))}" y="${H - m.b + 16}" text-anchor="middle">${y}</text>`).join("")}
+    ${yt.map((y) => `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${Y(Date.UTC(y, 0, 1))}" y2="${Y(Date.UTC(y, 0, 1))}"/>
+      <text class="tick" x="${m.l - 8}" y="${Y(Date.UTC(y, 0, 1)) + 4}" text-anchor="end">${y}</text><text class="tick" x="${W - m.r + 8}" y="${Y(Date.UTC(y, 0, 1)) + 4}">${y}</text>`).join("")}
+    <defs><clipPath id="plot-area"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></clipPath></defs>
+    <g clip-path="url(#plot-area)">
+${[1, 2, 3].map((n) => `<polygon class="band c${n}" points="${X(x0)},${Y(x0 - (n - 1) * YEAR)} ${X(x1)},${Y(x1 - (n - 1) * YEAR)} ${X(x1)},${Y(x1 - n * YEAR)} ${X(x0)},${Y(x0 - n * YEAR)}"/>`).join("")}
+      ${Array.from({ length: maxGapYears }, (_, k) => k + 1).map((n) => `<line class="diag${n > 3 ? " faint" : ""}" x1="${X(x0)}" y1="${Y(x0 - n * YEAR)}" x2="${X(x1)}" y2="${Y(x1 - n * YEAR)}"/>`).join("")}
+      ${lineTags.map((t) => `<text class="line-tag" x="${t.x.toFixed(1)}" y="${t.y.toFixed(1)}" text-anchor="middle">${t.n} yr</text>`).join("")}
+      <polygon class="band c4" points="${X(x0)},${Y(x0 - 3 * YEAR)} ${X(x1)},${Y(x1 - 3 * YEAR)} ${X(x1)},${H} ${X(x0)},${H}"/>
+    </g>
+    <line class="diag" x1="${X(d0)}" y1="${Y(d0)}" x2="${X(d1)}" y2="${Y(d1)}"/>
+<text class="tick" x="${W - m.r}" y="${m.t - 9}" text-anchor="end">top dashed line: covered on release day · each line below: one more year after release</text>
+    <text class="axis-title" x="${m.l}" y="${H - 6}">Cover released →</text>
+    <text class="axis-title" x="${m.l}" y="14">↑ Song released</text>
+    ${pts.map((p, i) => `<g class="pt" data-i="${i}">
+      <circle class="dot c${p.cls + 1}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5"/>
+      ${p.spot ? `<text class="lbl c${p.cls + 1}" x="${p.spot.tx.toFixed(1)}" y="${p.spot.ty.toFixed(1)}" text-anchor="${p.spot.anchor}">${esc(p.label)}</text>` : ""}
+      <circle class="hit" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11"/></g>`).join("")}
+  </svg>`;
+  // Density strip: how many covers came out in a 3-month window centred on each date. It counts
+  // every song (also those without a release date) and shares the scatter's x scale.
+  const all = rows.filter((s) => s.cover_date).map((s) => ({ s, t: Date.parse(s.cover_date) })).sort((a, b) => a.t - b.t);
+  const series = [];
+  for (let t = x0; t <= x1; t += 7 * DAY) series.push({ t, n: all.filter((c) => Math.abs(c.t - t) <= DENS_WINDOW / 2).length });
+  const DH = 150, dm = { t: 26, b: 12 }, nMax = Math.max(4, ...series.map((p) => p.n));
+  const dstep = nMax > 12 ? 4 : 2, dTop = Math.ceil(nMax / dstep) * dstep;
+  const DY = (n) => DH - dm.b - (n / dTop) * (DH - dm.t - dm.b);
+  const path = series.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${DY(p.n).toFixed(1)}`).join("");
+  density = { series, all, x0, x1, W, m };
+  const densSvg = `<svg class="plot density" width="${W}" height="${DH}" viewBox="0 0 ${W} ${DH}" role="img" aria-label="Number of covers released in a rolling 3-month window">
+    ${xt.map((y) => `<line class="grid" x1="${X(Date.UTC(y, 0, 1))}" x2="${X(Date.UTC(y, 0, 1))}" y1="${dm.t}" y2="${DH - dm.b}"/>`).join("")}
+    ${Array.from({ length: dTop / dstep + 1 }, (_, k) => k * dstep).map((n) => `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${DY(n)}" y2="${DY(n)}"/>
+      <text class="tick" x="${m.l - 8}" y="${DY(n) + 4}" text-anchor="end">${n}</text><text class="tick" x="${W - m.r + 8}" y="${DY(n) + 4}">${n}</text>`).join("")}
+    <path class="dens-area" d="${path}L${X(series[series.length - 1].t).toFixed(1)},${DY(0)}L${X(series[0].t).toFixed(1)},${DY(0)}Z"/>
+    <path class="dens-line" d="${path}"/>
+    <line class="cross" id="dens-cross" y1="${dm.t}" y2="${DH - dm.b}"/>
+    <text class="axis-title" x="${m.l}" y="14">↑ Covers released per 3 months (rolling)</text>
+    <text class="axis-title" x="${W - m.r}" y="14" text-anchor="end">Covers released per 3 months (rolling) ↑</text>
+  </svg>`;
+  const missing = rows.length - pts.length;
+  return `<p class="sub">${plural(pts.length, "song")}${GROUP_LABEL[group]} · hover a dot for details, click it to open the video${missing ? ` · ${plural(missing, "song")} without a release date not shown` : ""}${hidden ? ` · ${plural(hidden, "name")} hidden where dots are too crowded (still in the hover popup)` : ""}</p>
+    ${gapLegend([0, 1, 2, 3].map((c) => pts.filter((p) => p.cls === c).length))}
+    <div class="plot-scroll" id="plot-scroll"><div class="plot-inner" style="width:${W}px">
+      <div class="sticky-axis"><svg class="plot" width="${m.l}" height="${H}" aria-hidden="true"><rect width="${m.l}" height="${H}"/>
+        ${yt.map((y) => `<text class="tick" x="${m.l - 8}" y="${Y(Date.UTC(y, 0, 1)) + 4}" text-anchor="end">${y}</text>`).join("")}
+        <text class="axis-title" x="6" y="14">↑ Song</text></svg></div>
+      ${svg}
+      <div class="sticky-axis"><svg class="plot" width="${m.l}" height="${DH}" aria-hidden="true"><rect y="1" width="${m.l}" height="${DH - 1}"/>
+        ${Array.from({ length: dTop / dstep + 1 }, (_, k) => k * dstep).map((n) => `<text class="tick" x="${m.l - 8}" y="${DY(n) + 4}" text-anchor="end">${n}</text>`).join("")}</svg></div>
+      ${densSvg}</div></div>`;
+}
+
+// ---- Histogram of the gap between a song's release and ADT's cover ----
+let histBins = [];
+const MONTH = (365.25 / 12) * 864e5, HIST_MONTHS = 36;
+
+function fmtGap(months) {
+  return months < 1 ? `${Math.round(months * 30.44)} days` : months < 24 ? `${months.toFixed(1)} months` : `${(months / 12).toFixed(1)} years`;
+}
+
+function gapHistogram(rows, W) {
+  const gaps = rows.filter((s) => s.song_date && s.cover_date)
+    .map((s) => ({ s, months: Math.max(0, (Date.parse(s.cover_date) - Date.parse(s.song_date)) / MONTH), cls: gapClass(Date.parse(s.cover_date) - Date.parse(s.song_date)) }))
+    .sort((a, b) => a.months - b.months);
+  if (!gaps.length) return "";
+  const n = gaps.length, median = n % 2 ? gaps[(n - 1) / 2].months : (gaps[n / 2 - 1].months + gaps[n / 2].months) / 2;
+  // One bar per month for the first three years, then a single overflow bar for everything older.
+  histBins = Array.from({ length: HIST_MONTHS + 1 }, (_, i) => ({ i, songs: [] }));
+  for (const g of gaps) histBins[g.cls === 3 ? HIST_MONTHS : Math.min(HIST_MONTHS - 1, Math.floor(g.months))].songs.push(g);
+  const m = { l: 54, r: 54, t: 34, b: 40 }, H = 270, gapPx = 14;                 // gapPx sets the overflow bar apart
+  const bw = (W - m.l - m.r - gapPx) / (HIST_MONTHS + 1);
+  const bx = (i) => m.l + i * bw + (i === HIST_MONTHS ? gapPx : 0);
+  const top = Math.max(...histBins.map((b) => b.songs.length));
+  const step = top > 40 ? 10 : top > 16 ? 5 : top > 8 ? 2 : 1, yMax = Math.ceil(top / step) * step;
+  const Y = (c) => H - m.b - (c / yMax) * (H - m.t - m.b);
+  const bar = (b) => {
+    const x = bx(b.i) + 1, w = bw - 2, y = Y(b.songs.length), base = H - m.b, r = Math.min(4, w / 2, base - y);
+    return b.songs.length ? `<path class="bar c${Math.min(4, Math.floor(b.i / 12) + 1)}" d="M${x},${base}V${y + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${base}Z"/>` : "";
+  };
+  const ticks = [[0, "0"], [6, "6 mo"], [12, "1 yr"], [18, "18 mo"], [24, "2 yr"], [30, "30 mo"]];
+  const mx = median >= HIST_MONTHS ? bx(HIST_MONTHS) + bw / 2 : m.l + median * bw;
+  const labelLeft = mx > W / 2;
+  return `<h3>Time from song release to cover</h3>
+  <div class="plot-scroll hist"><svg class="plot" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of months between song release and cover; median ${fmtGap(median)}">
+    ${Array.from({ length: yMax / step + 1 }, (_, k) => k * step).map((c) => `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${Y(c)}" y2="${Y(c)}"/><text class="tick" x="${m.l - 8}" y="${Y(c) + 4}" text-anchor="end">${c}</text>`).join("")}
+    ${ticks.map(([mo, label]) => `<text class="tick" x="${m.l + mo * bw}" y="${H - m.b + 16}" text-anchor="middle">${label}</text>`).join("")}
+    <text class="tick" x="${bx(HIST_MONTHS) + bw / 2}" y="${H - m.b + 16}" text-anchor="middle">&gt;3 yr</text>
+    <text class="axis-title" x="${m.l}" y="${H - 6}">Time after song release →</text>
+    <text class="axis-title" x="${m.l}" y="14">↑ Songs covered</text>
+    ${histBins.map((b) => `<g class="bin" data-b="${b.i}">${bar(b)}<rect class="bar-hit" x="${bx(b.i)}" y="${m.t}" width="${bw}" height="${H - m.t - m.b}"/></g>`).join("")}
+    <line class="median" x1="${mx}" x2="${mx}" y1="${m.t - 6}" y2="${H - m.b}"/>
+    <text class="median-label" x="${mx + (labelLeft ? -8 : 8)}" y="${m.t + 4}" text-anchor="${labelLeft ? "end" : "start"}">Median: ${fmtGap(median)} after release</text>
+  </svg></div>`;
+}
+
+function showBinTip(g, e) {
+  const b = histBins[+g.dataset.b], n = b.songs.length, total = histBins.reduce((t, x) => t + x.songs.length, 0);
+  const range = b.i === HIST_MONTHS ? "More than 3 years after release" : b.i === 0 ? "Within a month of release" : `${b.i}–${b.i + 1} months after release`;
+  const names = b.songs.slice(0, 8).map((x) => `${esc(shortLabel(x.s.song))} <span class="dim">· ${esc(x.s.artist)}</span>`);
+  $("tip").innerHTML = `<b>${range}</b><br>${plural(n, "song")}${total ? ` · ${Math.round((n / total) * 100)}% of covers` : ""}
+    ${n ? `<div style="margin-top:4px">${names.join("<br>")}${n > 8 ? `<br><span class="dim">+${n - 8} more</span>` : ""}</div>` : ""}`;
+  placeTip(e);
+}
+
+function placeTip(e) {
+  const tip = $("tip");
+  tip.style.display = "block";
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 16, y = e.clientY + 16;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 16;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 16;
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top = Math.max(8, y) + "px";
+}
+
+function showDensityTip(svg, e) {
+  const { all, x0, x1, W, m } = density;
+  const px = e.clientX - svg.getBoundingClientRect().left;
+  const t = x0 + ((Math.min(W - m.r, Math.max(m.l, px)) - m.l) / (W - m.l - m.r)) * (x1 - x0);
+  const inWin = all.filter((c) => Math.abs(c.t - t) <= DENS_WINDOW / 2);
+  const day = (ms) => fmtDate(new Date(ms).toISOString().slice(0, 10));
+  const cross = $("dens-cross");
+  cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.style.display = "block";
+  $("tip").innerHTML = `<b>${plural(inWin.length, "cover")}</b> in 3 months<br><span class="dim">${day(t - DENS_WINDOW / 2)} – ${day(t + DENS_WINDOW / 2)}</span>
+    ${inWin.length ? `<div style="margin-top:4px">${inWin.slice(0, 10).map((c) => `${esc(shortLabel(c.s.song))} <span class="dim">· ${esc(c.s.artist)}</span>`).join("<br>")}${inWin.length > 10 ? `<br><span class="dim">+${inWin.length - 10} more</span>` : ""}</div>` : ""}`;
+  placeTip(e);
+}
+
+function showTip(g, e) {
+  const p = plotPoints[+g.dataset.i], s = p.s, tip = $("tip");
+  const days = Math.round((p.cx - p.sy) / 864e5);
+  const gap = days < 0 ? "before the song's listed release" : days < 60 ? `${plural(days, "day")} after release`
+    : days < 730 ? `${Math.round(days / 30.44)} months after release` : `${(days / 365.25).toFixed(1)} years after release`;
+  const extra = s.versions.length - 1;
+  tip.innerHTML = `<b>${esc(s.song)}</b><br>${esc(s.artist)}
+    <table>
+      <tr><td>Song released</td><td>${fmtDate(s.song_date)}</td></tr>
+      <tr><td>Cover released</td><td>${fmtDate(s.cover_date)}</td></tr>
+      <tr><td>Covered</td><td>${gap} <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:4px;background:var(--gap-${p.cls + 1})"></span> <span class="dim">${GAP_CLASSES[p.cls]}</span></td></tr>
+      ${s.streams_total ? `<tr><td>Spotify</td><td>${fmtCount(s.streams_total)} total · ${fmtCount(s.streams_daily)} daily</td></tr>` : ""}
+      ${s.directors && s.directors.length ? `<tr><td>Directed by</td><td>${s.directors.map((k) => esc((people.find((x) => x.key === k) || {}).name || k)).join(", ")}</td></tr>` : ""}
+      ${s.tags.length || extra ? `<tr><td>Versions</td><td>${esc([s.tags.join(" · "), extra ? `+${extra} more` : ""].filter(Boolean).join(" · "))}</td></tr>` : ""}
+    </table>`;
+  placeTip(e);
+}
+function hideTip() { $("tip").style.display = "none"; if ($("dens-cross")) $("dens-cross").style.display = "none"; document.querySelector(".plot g.hover")?.classList.remove("hover"); }
+
+function render() {
+  hideTip();
+  for (const b of document.querySelectorAll("#group-filter button")) b.classList.toggle("on", b.dataset.group === group);
+  const query = $("q").value.trim();
+  const route = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
+  const main = $("main");
+  $("nav-artists").classList.toggle("on", !query && route === "");
+  $("nav-all").classList.toggle("on", !query && route === "all");
+  $("nav-timeline").classList.toggle("on", !query && route === "timeline");
+  $("nav-people").classList.toggle("on", !query && (route === "people" || route.startsWith("person/")));
+  $("group-filter").style.display = !query && (route === "people" || route.startsWith("person/")) ? "none" : "";
+
+  if (query) {
+    const hitArtists = artists.filter((a) => inGroup(a) && matches(norm(a.name) + a.key, query));
+    const hits = songs.filter((c) => inGroup(c) && matches(c._hay, query));
+    const hitPeople = people.filter((p) => matches(norm(p.name), query));
+    main.innerHTML = `
+      <h2>Results for “${esc(query)}”</h2>
+      <p class="sub">${plural(hits.length, "song")}${hitArtists.length ? ` · ${plural(hitArtists.length, "matching artist")}` : ""}${hitPeople.length ? ` · ${plural(hitPeople.length, "matching dancer")}` : ""}${GROUP_LABEL[group]}</p>
+      ${hitArtists.length ? artistList(hitArtists) + "<br>" : ""}
+      ${hitPeople.length ? peopleList(hitPeople) + "<br>" : ""}
+      ${table(hits, { col: "cover_date", dir: -1 })}`;
+  } else if (route.startsWith("artist/")) {
+    const key = route.slice(7);
+    const artist = artists.find((a) => a.key === key);
+    const rows = songs.filter((c) => c.artist_key === key);
+    main.innerHTML = `
+      <a class="back" href="#/">← All artists</a>
+      <h2>${esc(artist ? artist.name : key)}</h2>
+      <p class="sub">${artist ? `${plural(artist.songs, "song")} covered · ${plural(artist.videos, "video")}` : "No covers yet."}</p>
+      ${table(rows, { col: "cover_date", dir: -1 })}`;
+  } else if (route === "timeline") {
+    const rows = songs.filter(inGroup);
+    const scatter = timelinePlot(rows, main.clientWidth - 2);
+    const cut = scatter.indexOf('<div class="plot-scroll"');   // summary line + colour legend on top, then histogram, then scatter
+    main.innerHTML = `<h2>Timeline</h2>${scatter.slice(0, cut)}${gapHistogram(rows, main.clientWidth - 2)}
+      <h3>Cover date vs. song release date</h3>${scatter.slice(cut)}`;
+    const sc = $("plot-scroll");
+    if (sc) sc.scrollLeft = sc.scrollWidth;          // start at the most recent covers
+  } else if (route === "people") {
+    const list = people.filter((p) => classMatches(p) && (!eligibleOnly || p.danced.length >= MIN_COVERS_TO_DIRECT));
+    main.innerHTML = `<h2>Dancers &amp; directors</h2>
+      <div class="filters"><span>Show</span>${classFilterControl()}
+        <label><input type="checkbox" id="eligible-filter"${eligibleOnly ? " checked" : ""}> Eligible to direct (danced in ${MIN_COVERS_TO_DIRECT}+ covers)</label><span>${plural(list.length, "person").replace("persons", "people")} of ${people.length}</span></div>
+      ${list.length ? peopleList(list) : '<p class="empty">Nobody matches this filter.</p>'}`;
+  } else if (route.startsWith("person/")) {
+    const p = people.find((x) => x.key === route.slice(7));
+    if (!p) { main.innerHTML = '<a class="back" href="#/people">← All people</a><p class="empty">Person not found.</p>'; return; }
+    const section = (title, rows) => rows.length
+      ? `<h2>${title} <span class="dim">(${rows.length})</span></h2>${table(rows, { col: "cover_date", dir: -1 })}` : "";
+    main.innerHTML = `
+      <a class="back" href="#/people">← All people</a>
+      <h2>${esc(p.name)}</h2>
+      <p class="sub">${p.category === "grad" ? classLabel(p) : `Class of ${esc(p.label)}${p.current ? "" : " (graduated)"}`}
+        · danced in ${plural(p.danced.length, "cover")} · directed ${plural(p.directed.length, "cover")}
+        ${p.ig ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.ig)}/" target="_blank" rel="noopener">@${esc(p.ig)}</a>` : ""}</p>
+      ${section("Directed", p.directed)}${section("Danced in", p.danced)}`;
+  } else if (route === "all") {
+    const rows = songs.filter(inGroup);
+    const videos = rows.reduce((n, s) => n + s.versions.length, 0);
+    main.innerHTML = `<h2>All covers</h2><p class="sub">${plural(rows.length, "song")} · ${plural(videos, "video")}${GROUP_LABEL[group]}</p>${table(rows, { col: "cover_date", dir: -1 })}`;
+  } else {
+    const list = artists.filter(inGroup);
+    main.innerHTML = `<h2>Artists</h2><p class="sub">${plural(list.length, "artist")}${GROUP_LABEL[group]} · pick one to see every song ADT has covered</p>${list.length ? artistList(list) : '<p class="empty">No artists found.</p>'}`;
+  }
+}
+
+$("main").addEventListener("click", (e) => {
+  const ath = e.target.closest("th[data-acol]");
+  if (ath) {
+    const col = ath.dataset.acol;
+    artistSort = artistSort.col === col ? { col, dir: -artistSort.dir } : { col, dir: col === "name" || col === "artist_type" ? 1 : -1 };
+    return render();
+  }
+  const pt = e.target.closest("g.pt");
+  if (pt) { window.open(plotPoints[+pt.dataset.i].s.url, "_blank", "noopener"); return; }
+  if (e.target.closest("#class-btn")) { classOpen = !classOpen; return render(); }
+  const preset = e.target.closest("[data-preset]");
+  if (preset) {
+    const tokens = { current: classDefault, all: classOptions().map((o) => o.token), none: [] }[preset.dataset.preset];
+    classSel = new Set(tokens);
+    return render();
+  }
+  const pth = e.target.closest("th[data-pcol]");
+  if (pth) {
+    const col = pth.dataset.pcol;
+    peopleSort = peopleSort.col === col ? { col, dir: -peopleSort.dir } : { col, dir: col === "name" ? 1 : -1 };
+    return render();
+  }
+  const row = e.target.closest("tr[data-href]");
+  if (row && !e.target.closest("a")) { location.hash = row.dataset.href; return; }
+  const th = e.target.closest("th[data-col]");
+  if (!th) return;
+  const col = th.dataset.col;
+  sort = sort && sort.col === col ? { col, dir: -sort.dir } : { col, dir: col.endsWith("date") || col.startsWith("streams") ? -1 : 1 };
+  render();
+});
+$("q").addEventListener("input", render);
+$("main").addEventListener("mousemove", (e) => {
+  const bin = e.target.closest("g.bin");
+  if (bin) {
+    if (!bin.classList.contains("hover")) { hideTip(); bin.classList.add("hover"); }
+    return showBinTip(bin, e);
+  }
+  const dens = e.target.closest("svg.density");
+  if (dens) { document.querySelector(".plot g.hover")?.classList.remove("hover"); return showDensityTip(dens, e); }
+  const g = e.target.closest("g.pt");
+  if (!g) return hideTip();
+  if (!g.classList.contains("hover")) { hideTip(); g.classList.add("hover"); g.parentNode.appendChild(g); }  // raise above neighbours
+  showTip(g, e);
+});
+$("main").addEventListener("mouseleave", hideTip);
+window.addEventListener("resize", () => { if (location.hash === "#/timeline" && !$("q").value.trim()) render(); });
+// Close the class popover when clicking elsewhere or pressing Escape.
+// It is removed in place rather than re-rendering, so the click that closed it still lands on its target.
+function closeClassPopover() {
+  classOpen = false;
+  $("class-popover")?.remove();
+  $("class-btn")?.setAttribute("aria-expanded", "false");
+}
+document.addEventListener("click", (e) => {
+  if (classOpen && !e.target.closest("#class-wrap")) closeClassPopover();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && classOpen) closeClassPopover();
+});
+$("main").addEventListener("change", (e) => {
+  if (e.target.dataset.class) {
+    if (e.target.checked) classSel.add(e.target.dataset.class); else classSel.delete(e.target.dataset.class);
+    render();
+  }
+  if (e.target.id === "eligible-filter") { eligibleOnly = e.target.checked; render(); }
+});
+$("group-filter").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-group]");
+  if (!b) return;
+  group = b.dataset.group;
+  if (location.hash.startsWith("#/artist/")) location.hash = "#/";   // the filter doesn't apply to a single artist's page
+  else render();
+});
+window.addEventListener("hashchange", () => { sort = null; classOpen = false; $("q").value = ""; window.scrollTo(0, 0); render(); });
+
+fetch("covers.json").then((r) => r.json()).then((data) => {
+  covers = data.covers;
+  const byArtist = new Map();
+  for (const c of covers) {
+    c._hay = norm(c.song) + " " + norm(c.artist) + " " + norm(c.title);
+    if (!byArtist.has(c.artist_key)) byArtist.set(c.artist_key, { key: c.artist_key, name: c.artist, artist_type: c.artist_type, songKeys: new Set(), videos: 0, latest_cover: "", latest_song: "" });
+    const a = byArtist.get(c.artist_key);
+    a.songKeys.add(c.song_key);
+    a.videos++;
+    if ((c.cover_date || "") > a.latest_cover) a.latest_cover = c.cover_date;
+    if ((c.song_date || "") > a.latest_song) a.latest_song = c.song_date;
+  }
+  // Merge every video of the same song into one entry. The main cover is the plainest version
+  // (fewest special tags, then earliest); variety / alternate versions hang off it as extra links.
+  const bySong = new Map();
+  for (const c of covers) {
+    const k = c.artist_key + "|" + c.song_key;
+    if (!bySong.has(k)) bySong.set(k, []);
+    bySong.get(k).push(c);
+  }
+  const specialness = (c) => c.tags.filter((t) => SPECIAL.test(t)).length;
+  songs = [...bySong.values()].map((vs) => {
+    vs.sort((a, b) => specialness(a) - specialness(b) || (a.cover_date || "").localeCompare(b.cover_date || ""));
+    return { ...vs[0], versions: vs, _hay: vs.map((v) => v._hay).join(" ") };
+  });
+  // People: which songs each person danced in / directed (any version of the song counts once).
+  const byKey = new Map(data.people.map((p) => [p.key, { ...p, danced: [], directed: [], latest_danced: "", latest_directed: "" }]));
+  for (const s of songs) {
+    const credit = (key, list, latest, date) => {
+      const p = byKey.get(key);
+      if (!p) return;
+      if (!p[list].includes(s)) p[list].push(s);
+      if ((date || "") > p[latest]) p[latest] = date;
+    };
+    for (const v of s.versions) {
+      for (const d of v.dancers || []) credit(d.key, "danced", "latest_danced", v.cover_date);
+      for (const k of v.directors || []) credit(k, "directed", "latest_directed", v.cover_date);
+    }
+  }
+  people = [...byKey.values()];
+  classDefault = [...new Set(people.filter((p) => p.current).map(classToken))];
+  classSel = new Set(classDefault);
+  artists = [...byArtist.values()].map((a) => ({ ...a, songs: a.songKeys.size }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  $("meta").textContent = covers.length
+    ? `${covers.length} videos · ${artists.length} artists${data.last_sync ? ` · synced ${data.last_sync}` : ""}${data.streams_updated ? ` · streams as of ${data.streams_updated}` : ""}`
+    : "No data yet — run: uv run adt-sync";
+  render();
+}).catch((err) => { $("main").innerHTML = `<p class="empty">Could not load covers: ${esc(err.message)}</p>`; });
+</script>
+</body>
+</html>

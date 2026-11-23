@@ -1,0 +1,19 @@
+[project]
+name = "adt-cover-check"
+version = "0.1.0"
+description = "Browse the songs covered by the MIT Asian Dance Team"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "yt-dlp>=2026.10.26",
+]
+
+[project.scripts]
+adt-sync = "adt_cover_check.sync:main"
+adt-streams = "adt_cover_check.streams:main"
+adt-serve = "adt_cover_check.server:main"
+adt-export = "adt_cover_check.export:main"
+
+[build-system]
+requires = ["uv_build>=0.9.13,<0.10.0"]
+build-backend = "uv_build"
